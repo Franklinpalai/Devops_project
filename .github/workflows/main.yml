@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  # JOB 1 : Lancement des tests unitaires et d'intégration
+  # JOB 1 : Lancement des tests unitaires et analyse SonarCloud
   test-backend:
     runs-on: ubuntu-24.04
     steps:
@@ -21,8 +21,15 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build and test with Maven
-        run: mvn clean verify --file ./backend/pom.xml
+      - name: Build, test and analyze with SonarCloud
+        # Commande unique qui nettoie, lance les tests, et envoie le rapport à SonarCloud
+        run: |
+          mvn -B verify sonar:sonar \
+            -Dsonar.projectKey=Franklinpalai \
+            -Dsonar.organization=franklinpalai \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            --file ./backend/pom.xml
 
   # JOB 2 : Build des images et Push sur Docker Hub
   build-and-push-docker-image:
