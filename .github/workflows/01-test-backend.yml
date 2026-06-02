@@ -21,8 +21,17 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      # On compile et on joue les tests (verify génère les rapports JaCoCo et les .class)
       - name: Build and Test with Maven
         run: mvn -B clean verify --file ./backend/pom.xml
+
+      # 🌟 ÉTAPE AJOUTÉE : Sauvegarder tout le dossier backend (code compilé + rapports de tests)
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build-assets
+          path: backend/
+          retention-days: 1 # Valable 1 jour, suffisant pour le pipeline
 
   # JOB 2 : Analyse de code de manière isolée
   sonar-analysis:
@@ -32,12 +41,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 🌟 ÉTAPE AJOUTÉE : Récupérer ce qui a été compilé au Job 1
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build-assets
+          path: backend/ # On le remet exactement au même endroit
+
+      # On remet Java car Sonar en a besoin pour exécuter la commande Maven
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
+      # On retire "verify" pour ne pas relancer les tests une deuxième fois inutilement. 
+      # On demande juste à Sonar de lire ce qui est déjà là.
       - name: SonarCloud Scan
         run: |
           mvn -B sonar:sonar \
