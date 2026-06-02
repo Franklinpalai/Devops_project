@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  # 1. Étage Base de Données (PostgreSQL)
+  my-database:
+    build: ./database          # Docker sait qu'il doit aller compiler le Dockerfile de ce dossier
+    container_name: my-db-container
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped     
+
+  # 2. Étage Backend (Spring Boot API)
+  my-backend:
+    build: .+/backend           # Docker va compiler ton gros Dockerfile Multistage
+    container_name: my-backend-container
+    environment:
+      - DB_HOST=my-database    
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - app-network
+      - proxy-network
+    depends_on:
+      - my-database            # Docker va attendre que la BDD soit lancée avant de démarrer l'API
+    restart: unless-stopped
+  # 3. Étage HTTP (Apache Reverse Proxy)
+  my-httpd:
+    build: ./httpd
+    container_name: my-httpd-container
+    ports:
+      - "80:80"                # On ouvre le port 80 vers ton Windows
+    environment:
+      - BACKEND_URL=my-backend:8080 # On cible le service backend sur son port interne
+    networks:
+      - proxy-network
+    depends_on:
+      - my-backend
+    restart: unless-stopped
+
+# Déclaration des ressources globales partagées
+volumes:
+  pg_data:                    # Plus besoin de créer le volume à la main avant !
+
+networks:
+  app-network:                # Plus besoin de faire 'docker network create'
+  proxy-network:              # Un réseau dédié pour le reverse proxy (optionnel, mais propre)
