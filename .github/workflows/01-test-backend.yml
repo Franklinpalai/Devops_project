@@ -8,7 +8,8 @@ on:
   pull_request:
 
 jobs:
-  test-backend:
+  # JOB 1 : Compilation et Tests Unitaires/Intégration
+  build-and-test:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -20,9 +21,26 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build, test and analyze with SonarCloud
+      - name: Build and Test with Maven
+        run: mvn -B clean verify --file ./backend/pom.xml
+
+  # JOB 2 : Analyse de code de manière isolée
+  sonar-analysis:
+    needs: build-and-test # Ne se lance que si le premier job réussit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: SonarCloud Scan
         run: |
-          mvn -B verify sonar:sonar \
+          mvn -B sonar:sonar \
             -Dsonar.projectKey=Franklinpalai \
             -Dsonar.organization=franklinpalai \
             -Dsonar.host.url=https://sonarcloud.io \
