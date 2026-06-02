@@ -25,7 +25,7 @@ jobs:
       - name: Build, test and analyze with SonarCloud
         run: |
           mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=Franklinpalai \
+            -Dsonar.projectKey=franklinpalai \
             -Dsonar.organization=franklinpalai \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
