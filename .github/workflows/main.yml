@@ -28,4 +28,4 @@ jobs:
       # Étape 3 : Lancer la commande Maven pour nettoyer, compiler et tester l'API
       - name: Build and test with Maven
         # On spécifie le chemin du pom.xml car l'API est dans le sous-dossier backend/simple-api
-        run: mvn clean verify --file ./backend/simple-api/pom.xml
+        run: mvn clean verify --file ./backend/pom.xml
