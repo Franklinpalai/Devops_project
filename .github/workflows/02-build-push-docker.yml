@@ -1,63 +1,77 @@
-name: Release & Publish Images
+name: CI/CD Pipeline for Franklin Application
 
 on:
-  workflow_run:
-    workflows: ["Backend Test & Quality"]
-    types:
-      - completed
+  push:
     branches:
       - main
+      - develop # 🚀 Permet de tester le pipeline directement depuis ta branche de dev
 
 jobs:
-  # JOB 1 : Couche Data (PostgreSQL)
+  # ==========================================
+  # 1. JOBS DE BUILD ET PUSH DOCKER
+  # ==========================================
+
   build-and-push-database:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and push Database image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: ./database
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
+          tags: franklinpalai/tp-devops-database:latest
 
-  # JOB 2 : Couche API / Métier (Spring Boot)
   build-and-push-backend:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-      - name: Build and push Backend image
-        uses: docker/build-push-action@v6
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
         with:
           context: ./backend
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
+          tags: franklinpalai/tp-devops-simple-api:latest
 
-  # JOB 3 : Couche Présentation / Proxy (Apache HTTPD)
   build-and-push-httpd:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and push HTTPD image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: ./httpd
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
+          tags: franklinpalai/tp-devops-httpd:latest
 
-  # 🚀 NOUVEAU JOB : Déploiement automatisé avec Ansible
+  # ==========================================
+  # 2. JOB DE DÉPLOIEMENT CONTINU (CD)
+  # ==========================================
+
   deploy:
     needs: [build-and-push-database, build-and-push-backend, build-and-push-httpd]
     runs-on: ubuntu-24.04
@@ -65,22 +79,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. On recrée temporairement le fichier de clé privée sur le runner GitHub
+      # Étape A : Configuration de la clé SSH privée sur le Runner pour se connecter au VPS
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
 
-      # 2. On installe Ansible sur le runner GitHub Actions
+      # Étape B : Installation d'Ansible sur le Runner GitHub Actions
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      # 3. On exécute le Playbook en désactivant la vérification de clé d'hôte (Host Key Checking)
-      - name: Run Ansible Playbook
+      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault de manière sécurisée
+      - name: Run Ansible Playbook with Vault
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
-          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-id inline_instruction@env:ANSIBLE_VAULT_PASSWORD
