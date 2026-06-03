@@ -4,29 +4,14 @@ on:
   push:
     branches:
       - main
-      - develop # 🚀 Indispensable pour que GitHub suive tes modifications en direct sur ta branche de dev !
+      - develop
 
 jobs:
-  # JOB 1 : Couche Data (PostgreSQL)
+  # ==========================================
+  # 1. JOBS DE BUILD ET PUSH DOCKER (CORRIGÉS)
+  # ==========================================
+
   build-and-push-database:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-
-      - name: Build image and push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
-          push: true
-
-  # JOB 2 : Couche API / Métier (Spring Boot)
-  build-and-push-backend:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -41,6 +26,23 @@ jobs:
           context: ./database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          push: true
+
+  build-and-push-backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Build image and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
 
   build-and-push-httpd:
@@ -60,7 +62,10 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
-  # 🚀 JOB DE DÉPLOIEMENT AUTOMATISÉ AVEC LE VAULT
+  # ==========================================
+  # 2. JOB DE DÉPLOIEMENT CONTINU (ANSIBLE)
+  # ==========================================
+
   deploy:
     needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd]
     runs-on: ubuntu-24.04
@@ -68,28 +73,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Configuration propre de la clé SSH et récupération automatique de l'empreinte du serveur (méthode validée de ton ami)
+      # Configuration propre de la clé SSH et masquage du stderr informatif
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
-          ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
+          ssh-keyscan franklin.kalfadangpalai.takima.school > ~/.ssh/known_hosts 2>/dev/null
 
-      # 2. Installation d'Ansible
+      # Installation d'Ansible
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      # 3. Installation de la collection Docker requise pour Ansible
+      # Installation de la collection Docker
       - name: Install Ansible Docker collection
         run: |
           ansible-galaxy collection install community.docker
 
-      # 4. Exécution du Playbook en injectant le mot de passe de ton coffre chiffré
+      # Exécution du Playbook (Avec le working-directory restauré !)
       - name: Run Ansible Playbook
+        working-directory: ./ansible
         run: |
           ansible-playbook -i inventories/setup.yml playbook.yml --become --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}") -v
-
-          #test 
