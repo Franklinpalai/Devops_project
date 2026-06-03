@@ -1,34 +1,15 @@
-name: CI/CD Pipeline for Franklin Application
+name: CD - Build and Push Docker Images
 
 on:
   push:
     branches:
       - main
-      - develop # Permet de tester le pipeline directement depuis ta branche de dev
+      - develop # 🚀 Te permet de tester directement sur ta branche de dev
 
 jobs:
   # ==========================================
   # 1. JOBS DE BUILD ET PUSH DOCKER
   # ==========================================
-
-  build-and-push-database:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push Database image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./database
-          push: true
-          tags: franklinpalai/tp-devops-database:latest
 
   build-and-push-backend:
     runs-on: ubuntu-24.04
@@ -36,18 +17,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Build and push API image
-        uses: docker/build-push-action@v5
+      - name: Build image and push backend
+        uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/backend-api/simpleapi
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
-          tags: franklinpalai/tp-devops-simple-api:latest
+
+  build-and-push-database:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Build image and push database
+        uses: docker/build-push-action@v6
+        with:
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/database
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          push: true
 
   build-and-push-httpd:
     runs-on: ubuntu-24.04
@@ -55,65 +53,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Build and push HTTPD image
-        uses: docker/build-push-action@v5
+      - name: Build image and push httpd
+        uses: docker/build-push-action@v6
         with:
-          context: ./httpd
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/http
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
-          tags: franklinpalai/tp-devops-httpd:latest
 
   # ==========================================
-  # 2. JOB DE DÉPLOIEMENT CONTINU (CD)
+  # 2. JOB DE DÉPLOIEMENT CONTINU (ANSIBLE)
   # ==========================================
 
   deploy:
-    needs: [build-and-push-database, build-and-push-backend, build-and-push-httpd]
+    needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Étape A : Configuration de la clé SSH et désactivation stricte du StrictHostKeyChecking de l'OS
-      - name: Set up SSH Key & Config
+      # Configuration propre de la clé SSH et récupération automatique de l'empreinte du serveur
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          # Écrit la clé privée
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          
-          # 🌟 LA CORRECTION SYSTÈME : On dit à l'OS du runner de ne pas bloquer sur les nouveaux serveurs
-          cat << 'EOF' > ~/.ssh/config
-          Host *
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
-          EOF
-          chmod 600 ~/.ssh/config
+          chmod 400 ~/.ssh/id_rsa
+          # 🌟 On scanne l'empreinte de TON serveur Franklin pour éviter le blocage
+          ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
 
-      # Étape B : Installation d'Ansible sur le Runner GitHub Actions
+      # Installation d'Ansible
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      # Étape C : Exécution du Playbook via le script éphémère de mot de passe
-      - name: Run Ansible Playbook with Vault
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: False
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+      # Installation de la collection Docker requise pour Ansible
+      - name: Install Ansible Docker collection
+        run: ansible-galaxy collection install community.docker
+
+      # Exécution du Playbook avec la méthode de substitution de fichier pour le Vault
+      - name: Run Ansible playbook
         run: |
-          # 1. Création du script éphémère pour renvoyer le mot de passe du coffre
-          echo '#!/bin/bash' > vault_pass.sh
-          echo 'echo "$ANSIBLE_VAULT_PASSWORD"' >> vault_pass.sh
-          chmod +x vault_pass.sh
-          
-          # 2. Lancement d'Ansible
-          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file ./vault_pass.sh
-          
-          # 3. Nettoyage
-          rm vault_pass.sh
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
