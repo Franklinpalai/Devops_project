@@ -92,10 +92,19 @@ jobs:
           sudo apt update
           sudo apt install -y ansible
 
-      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault de manière sécurisée
+      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault via un script éphémère
       - name: Run Ansible Playbook with Vault
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
-          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-id inline_instruction@env:ANSIBLE_VAULT_PASSWORD
+          # 1. Création du script éphémère pour renvoyer le mot de passe du coffre
+          echo '#!/bin/bash' > vault_pass.sh
+          echo 'echo "$ANSIBLE_VAULT_PASSWORD"' >> vault_pass.sh
+          chmod +x vault_pass.sh
+          
+          # 2. Lancement d'Ansible avec le pointeur sur ce script
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file ./vault_pass.sh
+          
+          # 3. Nettoyage du script
+          rm vault_pass.sh
