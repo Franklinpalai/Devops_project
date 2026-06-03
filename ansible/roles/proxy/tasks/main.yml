@@ -10,6 +10,6 @@
     ports:
       - "80:80"
     env:
-      BACKEND_URL: "backend:8080"
+      BACKEND_URL: "{{ vault_backend_url }}"
     restart_policy: always
     state: started

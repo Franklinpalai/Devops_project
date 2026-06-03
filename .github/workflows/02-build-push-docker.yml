@@ -1,4 +1,4 @@
-name: Release & Publish Images
+name: CD - Build and Push Docker Images
 
 on:
   push:
@@ -13,13 +13,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-      - name: Build and push Database image
+
+      - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
-          context: ./database
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/backend-api/simpleapi
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
 
   # JOB 2 : Couche API / Métier (Spring Boot)
@@ -28,33 +32,40 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-      - name: Build and push Backend image
+
+      - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/database
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
 
-  # JOB 3 : Couche Présentation / Proxy (Apache HTTPD)
   build-and-push-httpd:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Login to DockerHub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-      - name: Build and push HTTPD image
+
+      - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
-          context: ./httpd
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
+          # 🌟 Correction du chemin vers ton vrai dossier de TP
+          context: ./docker-3tiers-lab/http
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
   # 🚀 JOB DE DÉPLOIEMENT AUTOMATISÉ AVEC LE VAULT
   deploy:
-    needs: [build-and-push-database, build-and-push-backend, build-and-push-httpd]
+    needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
