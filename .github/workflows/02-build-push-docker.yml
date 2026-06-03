@@ -92,7 +92,7 @@ jobs:
           sudo apt update
           sudo apt install -y ansible
 
-      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault via un script éphémère
+      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault de manière sécurisée
       - name: Run Ansible Playbook with Vault
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
