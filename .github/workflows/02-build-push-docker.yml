@@ -24,7 +24,6 @@ jobs:
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ton API
           context: ./backend
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
@@ -42,7 +41,6 @@ jobs:
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ta bdd
           context: ./database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
@@ -60,13 +58,12 @@ jobs:
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ton serveur Apache
           context: ./httpd
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
-# ==========================================
+  # ==========================================
   # 2. JOB DE DÉPLOIEMENT CONTINU (ANSIBLE)
   # ==========================================
 
@@ -77,16 +74,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Configuration propre de la clé SSH (On nettoie la sortie stderr)
+      # Configuration propre de la clé SSH
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
-          # 🌟 Le '2>/dev/null' permet de cacher les logs d'info qui faisaient paniquer GitHub
           ssh-keyscan franklin.kalfadangpalai.takima.school > ~/.ssh/known_hosts 2>/dev/null
 
-      # Installation d'Ansible
+      # Installation d'Ansible sur le runner
       - name: Install Ansible
         run: |
           sudo apt update
@@ -97,8 +93,8 @@ jobs:
         run: |
           ansible-galaxy collection install community.docker
 
-      # Exécution du Playbook en restant dans le working directory
+      # Exécution du Playbook avec élévation des privilèges pour l'interpréteur
       - name: Run Ansible playbook
         working-directory: ./ansible
         run: |
-          ansible-playbook -i inventories/setup.yml playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
+          ansible-playbook -i inventories/setup.yml playbook.yml --become --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
