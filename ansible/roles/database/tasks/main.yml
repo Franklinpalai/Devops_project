@@ -1,0 +1,15 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/database
+- name: Run PostgreSQL Container
+  docker_container:
+    name: database
+    image: franklinpalai/tp-devops-database:latest
+    networks:
+      - name: app-network
+    env:
+      POSTGRES_DB: db
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: "mon_mot_de_passe_secret_kalfa"
+    restart_policy: always
+    state: started
