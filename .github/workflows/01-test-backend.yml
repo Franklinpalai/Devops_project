@@ -65,3 +65,5 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
             --file ./backend/pom.xml
+
+# JE SUIS PLUS CHARISMATIQUE QU'ALEXIANE
