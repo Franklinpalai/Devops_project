@@ -20,7 +20,6 @@ jobs:
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ton API
           context: ./backend
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
@@ -39,7 +38,6 @@ jobs:
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ta bdd
           context: ./database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
@@ -57,7 +55,6 @@ jobs:
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Vrai chemin direct vers ton serveur Apache
           context: ./httpd
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
@@ -93,4 +90,4 @@ jobs:
       # 4. Exécution du Playbook en injectant le mot de passe de ton coffre chiffré
       - name: Run Ansible Playbook
         run: |
-          ansible-playbook -i inventories/setup.yml playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
+          ansible-playbook -i inventories/setup.yml playbook.yml --become --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
