@@ -85,6 +85,11 @@ jobs:
           chmod 400 ~/.ssh/id_rsa
           ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
 
+      # 🌟 ÉTAPE CORRECTIVE : On répare les permissions de l'interpréteur Python imposé par le TP
+      - name: Fix Python Venv Permissions on VPS
+        run: |
+          ssh -i ~/.ssh/id_rsa admin@franklin.kalfadangpalai.takima.school "sudo chown -R admin:admin /opt/docker_venv && sudo chmod -R +x /opt/docker_venv/bin/"
+
       # Installation d'Ansible
       - name: Install Ansible
         run: |
@@ -95,7 +100,7 @@ jobs:
       - name: Install Ansible Docker collection
         run: ansible-galaxy collection install community.docker
 
-      # 🌟 CORRECTION ICI : On s'exécute directement DANS le dossier ansible
+      # Exécution du Playbook (en gardant l'interpréteur configuré dans ton setup.yml)
       - name: Run Ansible playbook
         working-directory: ./ansible
         run: |
