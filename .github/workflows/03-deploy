@@ -1,0 +1,27 @@
+ # 🚀 NOUVEAU JOB : Déploiement automatisé avec Ansible
+  deploy:
+    needs: [build-and-push-database, build-and-push-backend, build-and-push-httpd]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. On recrée temporairement le fichier de clé privée sur le runner GitHub
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 400 ~/.ssh/id_rsa
+
+      # 2. On installe Ansible sur le runner GitHub Actions
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      # 3. On exécute le Playbook en désactivant la vérification de clé d'hôte (Host Key Checking)
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: False
+        run: |
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml
