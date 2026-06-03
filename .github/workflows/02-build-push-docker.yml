@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - develop # 🚀 Permet de tester le pipeline directement depuis ta branche de dev
+      - develop # Permet de tester le pipeline directement depuis ta branche de dev
 
 jobs:
   # ==========================================
@@ -79,12 +79,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Étape A : Configuration de la clé SSH privée sur le Runner pour se connecter au VPS
-      - name: Set up SSH Key
+      # Étape A : Configuration de la clé SSH et désactivation stricte du StrictHostKeyChecking de l'OS
+      - name: Set up SSH Key & Config
         run: |
           mkdir -p ~/.ssh
+          # Écrit la clé privée
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 400 ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # 🌟 LA CORRECTION SYSTÈME : On dit à l'OS du runner de ne pas bloquer sur les nouveaux serveurs
+          cat << 'EOF' > ~/.ssh/config
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
 
       # Étape B : Installation d'Ansible sur le Runner GitHub Actions
       - name: Install Ansible
@@ -92,7 +101,7 @@ jobs:
           sudo apt update
           sudo apt install -y ansible
 
-      # Étape C : Exécution du Playbook en transmettant le mot de passe du Vault de manière sécurisée
+      # Étape C : Exécution du Playbook via le script éphémère de mot de passe
       - name: Run Ansible Playbook with Vault
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
@@ -103,8 +112,8 @@ jobs:
           echo 'echo "$ANSIBLE_VAULT_PASSWORD"' >> vault_pass.sh
           chmod +x vault_pass.sh
           
-          # 2. Lancement d'Ansible avec le pointeur sur ce script
+          # 2. Lancement d'Ansible
           ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file ./vault_pass.sh
           
-          # 3. Nettoyage du script
+          # 3. Nettoyage
           rm vault_pass.sh
