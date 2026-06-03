@@ -8,8 +8,8 @@
     networks:
       - name: app-network
     env:
-      POSTGRES_DB: db
-      POSTGRES_USER: usr
-      POSTGRES_PASSWORD: "mon_mot_de_passe_secret_kalfa"
+      POSTGRES_DB: "{{ vault_postgres_db }}"
+      POSTGRES_USER: "{{ vault_postgres_user }}"
+      POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
     restart_policy: always
     state: started
