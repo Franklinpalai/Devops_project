@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - develop # 🚀 Te permet de tester directement sur ta branche de dev
+      - develop
+      - test_hope # 🚀 Suivi direct de ta branche actuelle
 
 jobs:
   # ==========================================
@@ -23,8 +24,8 @@ jobs:
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/backend/simpleapi
+          # 🌟 Vrai chemin direct vers ton API
+          context: ./backend
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
@@ -41,8 +42,8 @@ jobs:
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/database
+          # 🌟 Vrai chemin direct vers ta bdd
+          context: ./database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
@@ -59,8 +60,8 @@ jobs:
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/http
+          # 🌟 Vrai chemin direct vers ton serveur Apache
+          context: ./httpd
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
@@ -76,26 +77,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Configuration propre de la clé SSH et récupération automatique de l'empreinte du serveur
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
-          # 🌟 On scanne l'empreinte de TON serveur Franklin pour éviter le blocage
           ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
 
-      # Installation d'Ansible
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      # Installation de la collection Docker requise pour Ansible
       - name: Install Ansible Docker collection
         run: ansible-galaxy collection install community.docker
 
-      # Exécution du Playbook avec la méthode de substitution de fichier pour le Vault
       - name: Run Ansible playbook
         run: |
           ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
