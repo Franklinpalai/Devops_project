@@ -87,7 +87,8 @@ jobs:
 
       # 3. Installation de la collection Docker requise pour Ansible
       - name: Install Ansible Docker collection
-        run: ansible-galaxy collection install community.docker
+        run: |
+          ansible-galaxy collection install community.docker
 
       # 4. Exécution du Playbook en injectant le mot de passe de ton coffre chiffré
       - name: Run Ansible Playbook
