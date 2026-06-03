@@ -1,17 +1,14 @@
 name: Release & Publish Images
 
 on:
-  workflow_run:
-    workflows: ["Backend Test & Quality"]
-    types:
-      - completed
+  push:
     branches:
       - main
+      - develop # 🚀 Indispensable pour que GitHub suive tes modifications en direct sur ta branche de dev !
 
 jobs:
   # JOB 1 : Couche Data (PostgreSQL)
   build-and-push-database:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -27,7 +24,6 @@ jobs:
 
   # JOB 2 : Couche API / Métier (Spring Boot)
   build-and-push-backend:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -43,7 +39,6 @@ jobs:
 
   # JOB 3 : Couche Présentation / Proxy (Apache HTTPD)
   build-and-push-httpd:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -57,4 +52,33 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
- 
+  # 🚀 JOB DE DÉPLOIEMENT AUTOMATISÉ AVEC LE VAULT
+  deploy:
+    needs: [build-and-push-database, build-and-push-backend, build-and-push-httpd]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Configuration propre de la clé SSH et récupération automatique de l'empreinte du serveur (méthode validée de ton ami)
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 400 ~/.ssh/id_rsa
+          ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
+
+      # 2. Installation d'Ansible
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      # 3. Installation de la collection Docker requise pour Ansible
+      - name: Install Ansible Docker collection
+        run: ansible-galaxy collection install community.docker
+
+      # 4. Exécution du Playbook en injectant le mot de passe de ton coffre chiffré
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
