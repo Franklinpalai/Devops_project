@@ -66,7 +66,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
-  # ==========================================
+# ==========================================
   # 2. JOB DE DÉPLOIEMENT CONTINU (ANSIBLE)
   # ==========================================
 
@@ -77,6 +77,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Configuration de la clé SSH
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -84,14 +85,18 @@ jobs:
           chmod 400 ~/.ssh/id_rsa
           ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
 
+      # Installation d'Ansible
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
+      # Installation de la collection Docker
       - name: Install Ansible Docker collection
         run: ansible-galaxy collection install community.docker
 
+      # 🌟 CORRECTION ICI : On s'exécute directement DANS le dossier ansible
       - name: Run Ansible playbook
+        working-directory: ./ansible
         run: |
-          ansible-playbook -i ansible/inventories/setup.yml ansible/playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
+          ansible-playbook -i inventories/setup.yml playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
