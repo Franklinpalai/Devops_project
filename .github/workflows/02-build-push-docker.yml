@@ -21,7 +21,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./docker-3tiers-lab/backend-api/simpleapi
+          context: ./tp-docker/backend/simpleapi
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
@@ -40,7 +40,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./docker-3tiers-lab/database
+          context: ./tp-docker/database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
@@ -58,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./docker-3tiers-lab/http
+          context: ./tp-docker/http
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
