@@ -20,8 +20,8 @@ jobs:
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/backend/simpleapi
+          # 🌟 Vrai chemin direct vers ton API
+          context: ./backend
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
@@ -39,8 +39,8 @@ jobs:
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/database
+          # 🌟 Vrai chemin direct vers ta bdd
+          context: ./database
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
           push: true
@@ -57,8 +57,8 @@ jobs:
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
-          # 🌟 Correction du chemin vers ton vrai dossier de TP
-          context: ./tp-docker/http
+          # 🌟 Vrai chemin direct vers ton serveur Apache
+          context: ./httpd
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
