@@ -4,15 +4,11 @@ on:
   push:
     branches:
       - main
-      - develop
-      - test_hope # 🚀 Suivi direct de ta branche actuelle
+      - develop # 🚀 Indispensable pour que GitHub suive tes modifications en direct sur ta branche de dev !
 
 jobs:
-  # ==========================================
-  # 1. JOBS DE BUILD ET PUSH DOCKER
-  # ==========================================
-
-  build-and-push-backend:
+  # JOB 1 : Couche Data (PostgreSQL)
+  build-and-push-database:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -30,7 +26,8 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
           push: true
 
-  build-and-push-database:
+  # JOB 2 : Couche API / Métier (Spring Boot)
+  build-and-push-backend:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -66,10 +63,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
           push: true
 
-# ==========================================
-  # 2. JOB DE DÉPLOIEMENT CONTINU (ANSIBLE)
-  # ==========================================
-
+  # 🚀 JOB DE DÉPLOIEMENT AUTOMATISÉ AVEC LE VAULT
   deploy:
     needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd]
     runs-on: ubuntu-24.04
@@ -77,31 +71,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Configuration de la clé SSH
-      - name: Setup SSH key
+      # 1. Configuration propre de la clé SSH et récupération automatique de l'empreinte du serveur (méthode validée de ton ami)
+      - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.ANSIBLE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
           ssh-keyscan franklin.kalfadangpalai.takima.school >> ~/.ssh/known_hosts
 
-      # 🌟 ÉTAPE CORRECTIVE : On répare les permissions de l'interpréteur Python imposé par le TP
-      - name: Fix Python Venv Permissions on VPS
-        run: |
-          ssh -i ~/.ssh/id_rsa admin@franklin.kalfadangpalai.takima.school "sudo chown -R admin:admin /opt/docker_venv && sudo chmod -R +x /opt/docker_venv/bin/"
-
-      # Installation d'Ansible
+      # 2. Installation d'Ansible
       - name: Install Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      # Installation de la collection Docker
+      # 3. Installation de la collection Docker requise pour Ansible
       - name: Install Ansible Docker collection
         run: ansible-galaxy collection install community.docker
 
-      # Exécution du Playbook (en gardant l'interpréteur configuré dans ton setup.yml)
-      - name: Run Ansible playbook
-        working-directory: ./ansible
+      # 4. Exécution du Playbook en injectant le mot de passe de ton coffre chiffré
+      - name: Run Ansible Playbook
         run: |
           ansible-playbook -i inventories/setup.yml playbook.yml --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}")
