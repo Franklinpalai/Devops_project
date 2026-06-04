@@ -67,7 +67,7 @@ jobs:
   # ==========================================
 
   deploy:
-    needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd]
+    needs: [build-and-push-backend, build-and-push-database, build-and-push-httpd, build-and-push-frontend]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -98,4 +98,20 @@ jobs:
         run: |
           ansible-playbook -i inventories/setup.yml playbook.yml --become --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}") -v
 
-#test sonarcloud
+  #test sonarcloud
+  build-and-push-frontend:
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Login to DockerHub
+          run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+        - name: Build image and push frontend
+          uses: docker/build-push-action@v6
+          with:
+            context: ./frontend
+            tags: |
+              ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-frontend:latest
+            push: true

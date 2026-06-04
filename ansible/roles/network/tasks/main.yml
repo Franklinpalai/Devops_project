@@ -5,3 +5,8 @@
   docker_network:
     name: app-network
     state: present
+
+- name: Create proxy network for httpd and frontend
+  docker_network:
+    name: proxy-network
+    state: present

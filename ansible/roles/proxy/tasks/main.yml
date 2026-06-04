@@ -6,10 +6,11 @@
     name: httpd
     image: franklinpalai/tp-devops-httpd:latest
     networks:
-      - name: app-network
+      - name: proxy-network
     ports:
       - "80:80"
     env:
-      BACKEND_URL: "{{ vault_backend_url }}"
+      BACKEND_URL: "backend:8080"
+      FRONTEND_URL: "frontend:80"
     restart_policy: always
     state: started
