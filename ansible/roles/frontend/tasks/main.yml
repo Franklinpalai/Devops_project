@@ -6,6 +6,6 @@
     name: frontend
     image: franklinpalai/tp-devops-frontend:latest
     networks:
-      - name: app-network
+      - name: proxy-network
     restart_policy: always
     state: started
