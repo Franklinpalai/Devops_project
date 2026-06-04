@@ -97,3 +97,5 @@ jobs:
         working-directory: ./ansible
         run: |
           ansible-playbook -i inventories/setup.yml playbook.yml --become --vault-password-file <(echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}") -v
+
+#test sonarcloud
