@@ -5,6 +5,7 @@
   docker_container:
     name: backend
     image: franklinpalai/tp-devops-simple-api:latest
+    pull: true
     networks:
       - name: app-network
       - name: proxy-network

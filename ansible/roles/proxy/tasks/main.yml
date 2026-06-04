@@ -5,6 +5,7 @@
   docker_container:
     name: httpd
     image: franklinpalai/tp-devops-httpd:latest
+    pull: true
     networks:
       - name: proxy-network
     ports:

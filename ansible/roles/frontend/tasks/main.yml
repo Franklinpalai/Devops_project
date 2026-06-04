@@ -5,6 +5,7 @@
   docker_container:
     name: frontend
     image: franklinpalai/tp-devops-frontend:latest
+    pull: true
     networks:
       - name: proxy-network
     restart_policy: always

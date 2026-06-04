@@ -5,6 +5,7 @@
   docker_container:
     name: database
     image: franklinpalai/tp-devops-database:latest
+    pull: true
     networks:
       - name: app-network
     env:
